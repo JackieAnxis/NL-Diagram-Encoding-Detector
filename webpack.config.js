@@ -1,26 +1,25 @@
-const path = require("path")
-const BundleAnalyzerPlugin = require("webpack-bundle-analyzer")
-    .BundleAnalyzerPlugin
+const path = require('path')
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
 
 module.exports = (env, argv) => {
     let watch = false
-    if ("watch" in env) {
-        if (env["watch"] === "true") {
+    if ('watch' in env) {
+        if (env['watch'] === 'true') {
             watch = true
         }
     }
     return {
-        entry: "./src/index.js",
-        mode: "development",
-        devtool: "inline-source-map",
+        entry: './src/index.js',
+        mode: 'development',
+        devtool: 'inline-source-map',
         output: {
-            filename:
-                env["mode"] === "production" ? "nlded.min.js" : "nlded.js",
-            libraryTarget: "umd",
-            path: path.resolve(__dirname, "build"),
+            filename: env['mode'] === 'production' ? 'nlded.min.js' : 'nlded.js',
+            library: 'nlded',
+            libraryTarget: 'umd',
+            path: path.resolve(__dirname, 'build')
         },
         node: {
-            fs: "empty",
+            fs: 'empty'
         },
         externals: {
             // loadsh: 'lodash',
@@ -28,21 +27,21 @@ module.exports = (env, argv) => {
         },
         plugins: [
             new BundleAnalyzerPlugin({
-                analyzerMode: "disabled",
+                analyzerMode: 'disabled',
                 generateStatsFile: true,
                 statsOptions: {
-                    source: false,
-                },
-            }),
+                    source: false
+                }
+            })
         ],
         watch: watch,
         optimization: {
-            minimize: env["mode"] === "production",
+            minimize: env['mode'] === 'production'
         },
         watchOptions: {
             ignored: /node_modules/,
             aggregateTimeout: 300,
-            poll: 1000,
-        },
+            poll: 1000
+        }
     }
 }

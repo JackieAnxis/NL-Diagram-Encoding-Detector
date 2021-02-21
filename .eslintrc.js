@@ -17,17 +17,9 @@ module.exports = {
     },
     rules: {
         // Customize your rules
+        'guard-for-in': false
     },
     overrides: [
-        {
-            files: ['**/*.ts', '**/*.tsx'],
-            extends: ['alloy', 'alloy/typescript'],
-            parser: '@typescript-eslint/parser',
-            plugins: ['@typescript-eslint/eslint-plugin'],
-            rules: {
-                'max-params': ['error', 4]
-            }
-        },
         {
             files: ['**/*.js'],
             extends: ['alloy'],
