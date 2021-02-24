@@ -19,7 +19,9 @@
     },
     "homepage": "https://github.com/JackieAnxis/NL-Diagram-Encoding-Detector#readme",
     "dependencies": {
-        "d3": "^6.5.0"
+        "d3": "^6.5.0",
+        "dom-compare": "^0.6.0",
+        "multikeymap": "^1.0.0"
     },
     "devDependencies": {
         "@babel/core": "^7.9.6",
