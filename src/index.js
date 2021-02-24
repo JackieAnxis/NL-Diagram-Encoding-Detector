@@ -12,7 +12,6 @@ import MultiKeyMap from 'multikeymap'
 
 const CATEGORICAL = 'categorical'
 const NUMERICAL = 'numerical'
-const NUMERICAL_STEP = 0.1 // 10%
 const BASIC_SVG_ELEMENTS = new Set([
     'circle',
     'ellipse',
@@ -21,12 +20,10 @@ const BASIC_SVG_ELEMENTS = new Set([
     'polyline',
     'rect',
     'path',
-    'text',
-    'mesh'
+    'text'
 ])
 
 /**
- *
  *
  * @param {string} code
  * @param {standard node-link data format} data
@@ -34,14 +31,39 @@ const BASIC_SVG_ELEMENTS = new Set([
 function detector(code, data) {
     // eslint-disable-next-line no-new-func
     const func = new Function('d3', 'data', code)
+    const svg = func(d3, data)
+    document.body.appendChild(svg)
 
-    // judge how each node/link is represented in the dom tree
-    const realtedVisualElements = computeRelatedVisualElements(data, func)
+    // prevent blocking
+    setTimeout(function () {
+        // judge how each node/link is represented in the dom tree
+        const realtedVisualElements = computeRelatedVisualElements(data, func)
 
-    const relatedVisualChannels = computeRelatedVisualChannels(data, func)
+        const relatedVisualChannels = computeRelatedVisualChannels(data, func)
 
-    console.log(realtedVisualElements, relatedVisualChannels)
+        console.log(realtedVisualElements, relatedVisualChannels)
+    }, 1000)
+    // TODO 1: style
+    // TODO 2: compress data
+    // TODO 3: correlation (positive or negative or ...)
 }
+
+/**
+ * compress complex json format data with deep structure
+ * e.g. {'nodes': [{'info': {'name': 'xxx', 'edge': 35}, 'percents': [10,20,30,40]}, ...], ...}
+ *  =>
+ * {'nodes': [{'info-name': 'xxx', 'info-edge': 35, 'percents-0': 10, 'percents-1': 20, ...}, ...]}
+ * @param {JSON format data} originData
+ * @return {JSON format data} encodedData
+ */
+function dataEncoder(originData) {}
+
+/**
+ * The opposite of dataEncoder
+ * @param {JSON format data} encodedData
+ * @return {JSON formated data}
+ */
+function dataDecoder(encodedData) {}
 
 /**
  * get nodes/links related visual elements and their counts
