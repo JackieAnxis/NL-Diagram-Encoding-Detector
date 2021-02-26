@@ -7,21 +7,32 @@
  */
 
 import * as d3 from 'd3'
-import { compare } from 'dom-compare'
 import MultiKeyMap from 'multikeymap'
 
 const CATEGORICAL = 'categorical'
 const NUMERICAL = 'numerical'
-const BASIC_SVG_ELEMENTS = new Set([
-    'circle',
-    'ellipse',
-    'line',
-    'polygon',
-    'polyline',
-    'rect',
-    'path',
-    'text'
+const COMMON_STYLE_CHANNELS = new Set([
+    'fill',
+    'fill-opacity',
+    'stroke',
+    'stroke-dasharray',
+    'stroke-opacity',
+    'stroke-width',
+    'transform'
 ])
+const BASIC_SVG_ELEMENTS = new Map([
+    ['circle', ['r']],
+    ['ellipse', ['rx', 'ry']],
+    ['line', ['x1', 'x2', 'y1', 'y2']],
+    ['polygon', ['points']],
+    ['polyline', ['points']],
+    ['rect', ['x', 'y', 'width', 'height', 'rx', 'ry']],
+    ['path', ['d']]
+])
+BASIC_SVG_ELEMENTS.forEach((attributes, name) => {
+    attributes = attributes.concat([...COMMON_STYLE_CHANNELS])
+    BASIC_SVG_ELEMENTS.set(name, new Set(attributes))
+})
 
 /**
  *
@@ -31,21 +42,29 @@ const BASIC_SVG_ELEMENTS = new Set([
 function detector(code, data) {
     // eslint-disable-next-line no-new-func
     const func = new Function('d3', 'data', code)
-    const svg = func(d3, data)
-    document.body.appendChild(svg)
 
-    // prevent blocking
-    setTimeout(function () {
-        // judge how each node/link is represented in the dom tree
-        const realtedVisualElements = computeRelatedVisualElements(data, func)
+    const svg = func(d3, deepcopy(data))
+    const styleTree = computeStyleTreeFor(svg)
+    const svgBeta = func(d3, deepcopy(data))
+    const styleTreeBeta = computeStyleTreeFor(svgBeta)
 
-        const relatedVisualChannels = computeRelatedVisualChannels(data, func)
+    const diff = compare(svg, svgBeta)
+    // if diff is not an empty object
+    // it means some visual channels are not stable (same inputs lead to different outputs)
+    if (Object.keys(diff).length > 0) {
+        console.log(diff)
+    }
 
-        console.log(realtedVisualElements, relatedVisualChannels)
-    }, 1000)
-    // TODO 1: style
+    // // judge how each node/link is represented in the dom tree
+    const realtedVisualElements = computeRelatedVisualElements(data, func) // which element is related to which data entity (node/link)
+    const relatedVisualChannels = computeRelatedVisualChannels(data, func) // which visual channel is related to which attribute
+
+    console.log(realtedVisualElements, relatedVisualChannels)
+
+    // DONE 1: style
     // TODO 2: compress data
     // TODO 3: correlation (positive or negative or ...)
+    // TODO 4: SVG encoder decoder
 }
 
 /**
@@ -217,25 +236,30 @@ function computeRelatedVisualChannels(data, func) {
             clonedData[key].forEach((ele) => {
                 ele[attrName] = attrInfo.range[d3.randomInt(0, attrInfo.range.length)()]
             })
+
+            // generate new function
             const clonedSVG = func(d3, clonedData)
-            const diff = compare(originSVG, clonedSVG).getDifferences()
-            const changes = {}
-            diff.forEach(({ /* this node is not that node in the data */ node, message }) => {
-                if (message.indexOf('Attribute') === 0) {
-                    let element = node.split('/').pop()
-                    element = element.split('[').shift()
-                    let channel = message.match(/Attribute '(\S*)'.*/)[1]
-                    // TODO remove position channels: x/y/x1/...
-                    if (!changes[element]) {
-                        changes[element] = {}
-                    } else {
-                        changes[element][channel] = true
-                    }
-                } else {
-                    console.error('Something Wrong...')
-                }
-            })
-            relatedVisualChannels[key][attrName] = changes
+            // TODO replace it by ourself
+            const diff = compare(originSVG, clonedSVG)
+
+            // const diff = compare(originSVG, clonedSVG).getDifferences()
+            // const changes = {}
+            // diff.forEach(({ /* this node is not that node in the data */ node, message }) => {
+            //     if (message.indexOf('Attribute') === 0) {
+            //         let element = node.split('/').pop()
+            //         element = element.split('[').shift()
+            //         let channel = message.match(/Attribute '(\S*)'.*/)[1]
+            //         // TODO remove position channels: x/y/x1/...
+            //         if (!changes[element]) {
+            //             changes[element] = {}
+            //         } else {
+            //             changes[element][channel] = true
+            //         }
+            //     } else {
+            //         console.error('Something Wrong...')
+            //     }
+            // })
+            // relatedVisualChannels[key][attrName] = changes
         })
     })
     return relatedVisualChannels
@@ -247,7 +271,7 @@ function computeRelatedVisualChannels(data, func) {
  */
 function countBasicElementsOf(svg) {
     const count = {}
-    BASIC_SVG_ELEMENTS.forEach((name) => {
+    BASIC_SVG_ELEMENTS.forEach((_, name) => {
         const size = d3.select(svg).selectAll(name).size()
         count[name] = size
     })
@@ -345,6 +369,130 @@ function computeAttributeTypeAndRange(data, NUMERICAL_LENGTH_THRESHOLD = 10) {
         type,
         range
     }
+}
+
+/**
+ *
+ * @param {html dom element} element1
+ * @param {html dom element} element2
+ * @return {object} differences tree: {name, style: {String => Boolean}, children: [{...}, ...]}
+ */
+function compare(element1, element2) {
+    const styleTree1 = computeStyleTreeFor(element1)
+    const styleTree2 = computeStyleTreeFor(element2)
+
+    const diff = compareStyleTrees(styleTree1, styleTree2)
+    return diff
+}
+
+/**
+ * get a dom tree with styles
+ * @param {html dom element} element
+ * @return {object} style tree (visual channel tree): { name: String, style: {String => String}, children: [{...}, ...]}
+ */
+function computeStyleTreeFor(element) {
+    document.body.appendChild(element)
+    const visualChannelTree = _computeStyleTreeFor(element)
+    document.body.removeChild(element)
+    return visualChannelTree
+
+    function _computeStyleTreeFor(element) {
+        // each node in tree contains: name, style, children
+        const treeNode = {}
+        if (BASIC_SVG_ELEMENTS.has(element.tagName)) {
+            // it is a basic visual element
+            treeNode.name = element.tagName
+            treeNode.style = {}
+            const style = window.getComputedStyle(element)
+            BASIC_SVG_ELEMENTS.get(element.tagName).forEach((attr) => {
+                treeNode.style[attr] = style[attr]
+            })
+        } else if (['g', 'svg'].indexOf(element.tagName) >= 0) {
+            // ! WARNING: transform is not considered yet
+            treeNode.name = element.tagName
+            treeNode.children = []
+            Array.from(element.children).forEach((child) => {
+                const childTreeNode = _computeStyleTreeFor(child)
+                treeNode.children.push(childTreeNode)
+            })
+            if (Object.keys(treeNode).length === 0) {
+                treeNode = {}
+            }
+        } else {
+            // something we don't care
+        }
+        return treeNode
+    }
+}
+
+/**
+ * get a dom tree with differences
+ * @param {node of style tree} styleTreeNode1
+ * @param {node of style tree} styleTreeNode2
+ * @return {object} differences tree: {name, style: {String => Boolean}, children: [{...}, ...]}
+ */
+function compareStyleTrees(styleTreeNode1, styleTreeNode2) {
+    if (styleTreeNode1.name !== styleTreeNode2.name) {
+        console.error('Something wrong...')
+    }
+    const diff = { name: styleTreeNode1.name }
+    if (BASIC_SVG_ELEMENTS.has(styleTreeNode1.name)) {
+        diff.style = {}
+        Object.keys(styleTreeNode1.style).forEach((name) => {
+            if (styleTreeNode1.style[name] !== styleTreeNode2.style[name]) {
+                diff.style[name] = true
+            }
+        })
+        if (!Object.keys(diff.style).length) {
+            delete diff['style']
+        }
+    } else if (['g', 'svg'].indexOf(styleTreeNode1.name) >= 0) {
+        diff.children = []
+        if (styleTreeNode1.children.length !== styleTreeNode2.children.length) {
+            console.error('Something wrong with style tree children length')
+        }
+        for (let i = 0; i < styleTreeNode1.children.length; i++) {
+            const childDiff = compareStyleTrees(
+                styleTreeNode1.children[i],
+                styleTreeNode2.children[i]
+            )
+            if (Object.keys(childDiff).length) {
+                diff.children.push(childDiff)
+            }
+        }
+        if (!diff.children.length) {
+            delete diff['children']
+        }
+    } else {
+        console.error('Something wrong...')
+    }
+    if ('style' in diff || 'children' in diff) {
+        return diff
+    } else {
+        return {}
+    }
+}
+
+/**
+ *
+ */
+function dfs(obj, callback) {
+    const stack = []
+    let index = obj
+    stack.push(index)
+    // while (true) {
+    //     while (index?.children?.length) {
+    //         index.children.forEach(stack.push)
+    //         index = index.children[index.children.length - 1]
+    //     }
+    //     const node = stack.pop()
+    //     callback(node)
+    //     if (stack.length) {
+    //         index = stack.pop()
+    //     } else {
+    //         break
+    //     }
+    // }
 }
 
 export { detector }
