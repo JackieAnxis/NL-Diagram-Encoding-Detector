@@ -4,8 +4,7 @@ module.exports = {
         // Your environments (which contains several predefined global variables)
         //
         browser: true,
-        es6: true,
-        jest: true
+        es6: true
         // node: true,
         // mocha: true,
         // jquery: true
@@ -23,7 +22,10 @@ module.exports = {
         {
             files: ['**/*.js'],
             extends: ['alloy'],
-            parser: 'babel-eslint'
+            parser: 'babel-eslint',
+            rules: {
+                strict: 0
+            }
         }
     ]
 }
