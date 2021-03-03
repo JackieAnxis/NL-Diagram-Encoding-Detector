@@ -13,8 +13,8 @@ module.exports = (env, argv) => {
         mode: 'development',
         devtool: 'inline-source-map',
         output: {
-            filename: env['mode'] === 'production' ? 'nlded.min.js' : 'nlded.js',
-            library: 'nlded',
+            filename: env['mode'] === 'production' ? 'NoLin2Text.min.js' : 'NoLin2Text.js',
+            library: 'NoLin2Text',
             libraryTarget: 'umd',
             path: path.resolve(__dirname, 'build')
         },
@@ -42,6 +42,20 @@ module.exports = (env, argv) => {
             ignored: /node_modules/,
             aggregateTimeout: 300,
             poll: 1000
+        },
+        module: {
+            rules: [
+                {
+                    test: /\.m?js$/,
+                    use: {
+                        loader: 'babel-loader',
+                        options: {
+                            presets: ['@babel/preset-env']
+                        }
+                    },
+                    exclude: '/node_modules/'
+                }
+            ]
         }
     }
 }
