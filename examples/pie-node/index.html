@@ -7,12 +7,12 @@
     <body></body>
     <script src="../libs/d3.v6.min.js"></script>
     <script src="./code.js"></script>
-    <script src="../../build/nlded.js"></script>
+    <script src="../../build/NoLin2Text.js"></script>
     <script>
         d3.text('code.js').then(function (code) {
             d3.json('miserables.json').then(function (json) {
                 const data = json
-                nlded.detector(code, data)
+                NoLin2Text.detector(code, data)
             })
         })
     </script>

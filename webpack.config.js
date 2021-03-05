@@ -9,7 +9,7 @@ module.exports = (env, argv) => {
         }
     }
     return {
-        entry: './src/index.js',
+        entry: ['@babel/polyfill', './src/index.js'],
         mode: 'development',
         devtool: 'inline-source-map',
         output: {
