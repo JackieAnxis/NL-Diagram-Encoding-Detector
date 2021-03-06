@@ -1,5 +1,5 @@
 {
-    "name": "nl-diagram-encoding-detector",
+    "name": "nolin2text",
     "version": "0.0.1",
     "description": "",
     "main": "index.js",
@@ -10,14 +10,14 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/JackieAnxis/NL-Diagram-Encoding-Detector.git"
+        "url": "git+https://github.com/JackieAnxis/NoLin2Text.git"
     },
     "author": "",
     "license": "ISC",
     "bugs": {
-        "url": "https://github.com/JackieAnxis/NL-Diagram-Encoding-Detector/issues"
+        "url": "https://github.com/JackieAnxis/NoLin2Text/issues"
     },
-    "homepage": "https://github.com/JackieAnxis/NL-Diagram-Encoding-Detector#readme",
+    "homepage": "https://github.com/JackieAnxis/NoLin2Text#readme",
     "dependencies": {
         "d3": "^6.5.0"
     },
