@@ -7,9 +7,16 @@
  */
 
 import * as d3 from 'd3'
+import MultiKeyMap from 'multikeymap'
+
+import compare from './compare'
+import { object } from './utils'
+import * as entity2elementMapper from './entity2elementMapper'
+
+const CATEGORICAL = 'categorical'
+const NUMERICAL = 'numerical'
 
 /**
- *
  *
  * @param {string} code
  * @param {standard node-link data format} data
@@ -17,21 +24,256 @@ import * as d3 from 'd3'
 function detector(code, data) {
     // eslint-disable-next-line no-new-func
     const func = new Function('d3', 'data', code)
-    const originSVG = func(d3, data)
-    const attrs = getAttributesOf(data)
-    console.log(attrs)
-    const syntheticData = generateSyntheticData(data) // {nodes: {attr1: data1, attr2: data2, ...}, links: {...}}
-    console.log(syntheticData)
-    const keys = Object.keys(data) // ['nodes', 'links']
+
+    // Step1: Eliminate random encoding
+    const svg = func(d3, object.deepcopy(data))
+    const svgBeta = func(d3, object.deepcopy(data))
+    const diffTree = compare(svg, svgBeta)
+    let unstableStyleTree = undefined
+    // if diff is not an empty object
+    // it means some visual channels are not stable (it means random, same inputs lead to different outputs)
+    if (!diffTree) {
+        console.error('The input code is unstable.')
+        return false
+    }
+
+    if (!diffTree.isEmpty()) {
+        unstableStyleTree = diffTree
+    }
+
+    // Step2: Data Binding
+    // Step2.1:  Data Attribute <=> Visual Channel
+    // change the value of each attribute in each data entity
+    // test which visual channels are changed
+    const attrs = getAttributesOf(data) // TODO add some measures: degree...
+    const attr2style = { nodes: {}, links: {} } // attributes that change visual channels
+    const attr2struct = { nodes: {}, links: {} } // attributes that change structures (tagName or # of elements)
+    const keys = ['nodes', 'links']
     keys.forEach((key) => {
-        for (let attrName in syntheticData[key]) {
-            syntheticData[key][attrName].forEach((newData) => {
-                const newSVG = func(d3, newData)
-                const diff = getChangedVisualChannels(originSVG, newSVG)
-                console.log(diff)
+        attrs[key].forEach((attrInfo, attrName) => {
+            const clonedData = object.deepcopy(data)
+            // randomize attribute value
+            const range = d3.shuffle(attrInfo.range.slice())
+            if (range.length !== clonedData[key].length) {
+                console.error('Lenght not equal.')
+            }
+            clonedData[key].forEach((ele, i) => {
+                ele[attrName] = range[i]
+            })
+
+            // generate new function
+            const clonedSVG = func(d3, clonedData)
+            let diffChannels = compare(svg, clonedSVG)
+            if (diffChannels && !diffChannels.isEmpty()) {
+                if (unstableStyleTree) {
+                    diffChannels.eliminate(unstableStyleTree)
+                }
+                attr2style[key][attrName] = diffChannels
+            } else {
+                // cannot compare, the structure is changed
+                // juedge whether only encode tagName or encode # of elements
+                // TODO
+                attr2struct[key][attrName] = true
+                console.warn(
+                    `Structures are different after change attribute (${attrName}) of ${key}`
+                )
+            }
+        })
+    })
+    // Step2.2: Data Entity <=> Visual Element
+    // if no attribute will change the structure,
+    // we can get the map by deleting/adding data
+    if (!Object.keys(attr2struct.nodes).length) {
+        // for nodes
+        entity2elementMapper.ifNoStructChange.nodeMapper(data, func)
+    }
+    if (!Object.keys(attr2struct.links).length) {
+        // TODO: for links
+    }
+    // 其他情况：
+    // 判断一个视觉通道是numerical还是categorical的？
+    // 如果是categorical的，其unique的值会很少
+    // 如果是numerical的，其unique的值会很多
+
+    // 若存在： numerical 的视觉通道：数据分布会影响映射，只换，不改；
+    // 0. 初始svg0；初始data0；
+    // 1. data0的基础上，交换 A B 的所有 attr2style 属性（保证 A 和 B 的这些属性不完全一样）；data1 svg1，对比 svg0 和 svg1，找出修改内容；该内容可能只跟A相关，可能只跟B相关，可能两者都相关；
+    // 2. data0的基础上，交换 A C 的所有 attr2style 属性（保证 A 和 C 的这些属性不完全一样）；data2 svg2，对比 svg0 和 svg1，找出修改内容；该内容可能只跟A相关，可能只跟C相关，可能两者都相关；
+    // 3. 分析1和2中的修改内容，相同部分为A，不相同部分为B和C；
+    // 若存在： categorical 的视觉通道：只有数据顺序（出现）会影响映射方式，只改，不换；
+    //
+
+    console.log(attr2style)
+
+    // DONE 1: style
+    // TODO 2: compress data
+    // TODO 3: correlation (positive or negative or ...)
+    // TODO 4: SVG encoder decoder
+}
+
+/**
+ * get nodes/links related visual elements and their counts
+ * @param {JSON format data} data
+ * @param {d3 function} func
+ */
+function computeRelatedVisualElements(data, func) {
+    // judge how each node/link is represented in the dom tree
+    // find visual elements for each node
+    // first, find visual elements for all nodes except nodes[0]
+    const clonedDataWithOneNode = { nodes: [data.nodes[0]], links: [] }
+    let lastSVG = func(d3, clonedDataWithOneNode)
+    let lastCount = countBasicElementsOf(lastSVG)
+    const nodesRelatedElements = {}
+    let svg, diff, count
+    for (let i = 1; i < data.nodes.length; i++) {
+        const node = object.deepcopy(data.nodes[i])
+        const id = node.id
+        clonedDataWithOneNode.nodes.push(node)
+        svg = func(d3, clonedDataWithOneNode)
+        count = countBasicElementsOf(svg)
+        const diff = computeCntDiffBtwn(lastCount, count)
+        nodesRelatedElements[id] = []
+        for (let name in diff) {
+            if (diff[name] > 0) {
+                nodesRelatedElements[id].push({
+                    name,
+                    count: diff[name]
+                })
+            }
+        }
+        lastCount = count
+        lastSVG = svg
+    }
+    // second, find visual elements of nodes[0]
+    const node0 = clonedDataWithOneNode.nodes.shift() // remove nodes[0]
+    svg = func(d3, clonedDataWithOneNode)
+    count = countBasicElementsOf(svg)
+    diff = computeCntDiffBtwn(count, lastCount)
+    nodesRelatedElements[node0.id] = []
+    for (let name in diff) {
+        if (diff[name] > 0) {
+            nodesRelatedElements[node0.id].push({
+                name,
+                count: diff[name]
             })
         }
+    }
+    // nodes related visual elements are found yet.
+    // compress, remove duplication
+    const nodesRelatedElementsMap = new MultiKeyMap()
+    Object.values(nodesRelatedElements).forEach((count) => {
+        nodesRelatedElementsMap.set(
+            count.map(({ name, count }) => `${name}:${count}`),
+            true
+        )
     })
+
+    // find visual elements for each link, the procedure is similar to nodes
+    const clonedDataWithAllNodes = {
+        nodes: object.deepcopy(data.nodes),
+        links: [object.deepcopy(data.links[0])]
+    }
+    lastSVG = func(d3, clonedDataWithAllNodes)
+    lastCount = countBasicElementsOf(lastSVG)
+    const linksRelatedElements = {}
+    count = {}
+    for (let i = 1; i < data.links.length; i++) {
+        const link = object.deepcopy(data.links[i])
+        clonedDataWithAllNodes.links.push(link)
+        const svg = func(d3, clonedDataWithAllNodes)
+        count = countBasicElementsOf(svg)
+        diff = computeCntDiffBtwn(lastCount, count)
+        let id = `${link.source}-${link.target}` // !NOTE: suppose links are unduplicated and undirected
+        linksRelatedElements[id] = []
+        for (let name in diff) {
+            if (diff[name] > 0) {
+                linksRelatedElements[id].push({
+                    name,
+                    count: diff[name]
+                })
+            }
+        }
+        lastCount = count
+        lastSVG = svg
+    }
+    // second, find visual elements of links[0]
+    const link0 = clonedDataWithAllNodes.links.shift() // remove links[0]
+    let idOfLink0 = `${link0.source}-${link0.target}`
+    svg = func(d3, clonedDataWithAllNodes)
+    count = countBasicElementsOf(svg)
+    diff = computeCntDiffBtwn(count, lastCount)
+    linksRelatedElements[idOfLink0] = []
+    for (let name in diff) {
+        if (diff[name] > 0) {
+            linksRelatedElements[idOfLink0].push({
+                name,
+                count: diff[name]
+            })
+        }
+    }
+    // links related visual elements are found yet.
+    // compress, remove duplication
+    const linksRelatedElementsMap = new MultiKeyMap()
+    Object.values(linksRelatedElements).forEach((count) => {
+        linksRelatedElementsMap.set(
+            count.map(({ name, count }) => `${name}:${count}`),
+            true
+        )
+    })
+
+    return {
+        nodes: [...nodesRelatedElementsMap.keys()].map((keys) => {
+            return keys
+                .map((key) => {
+                    const [name, count] = key.split(':')
+                    return { name, count }
+                })
+                .reduce((map, value) => {
+                    map[value.name] = value.count
+                    return map
+                }, {})
+        }),
+        links: [...linksRelatedElementsMap.keys()].map((keys) => {
+            return keys
+                .map((key) => {
+                    const [name, count] = key.split(':')
+                    return { name, count }
+                })
+                .reduce((map, value) => {
+                    map[value.name] = value.count
+                    return map
+                }, {})
+        })
+    }
+}
+
+/**
+ * get nodes/links attributes related visual channels
+ * @param {JSON format data} data
+ * @param {d3 function} func
+ */
+function computeRelatedVisualChannels(data, func) {
+    // change the value of each attribute in each data entity
+    // test which visual channels are changed
+    const originSVG = func(d3, data)
+    const attrs = getAttributesOf(data)
+    const relatedVisualChannels = { nodes: {}, links: {} }
+    const keys = ['nodes', 'links']
+    keys.forEach((key) => {
+        attrs[key].forEach((attrInfo, attrName) => {
+            const clonedData = object.deepcopy(data)
+            // randomize attribute value
+            const shuffled = d3.shuffle(attrInfo.range.slice())
+            clonedData[key].forEach((entity, i) => {
+                entity[attrName] = shuffled[i]
+            })
+
+            // generate new function
+            const clonedSVG = func(d3, clonedData)
+            const diff = compare(originSVG, clonedSVG)
+        })
+    })
+    return relatedVisualChannels
 }
 
 /**
@@ -40,113 +282,67 @@ function detector(code, data) {
  * @returns {nodes: node attributes array, links: link attributes array}
  */
 function getAttributesOf(data) {
-    const nodeAttrs = new Set()
-    const linkAttrs = new Set()
+    const nodeAttrs = new Map()
+    const linkAttrs = new Map()
     data.nodes.forEach((node) => {
         for (let attr in node) {
-            nodeAttrs.add(attr)
+            if (nodeAttrs.has(attr)) {
+                nodeAttrs.get(attr).push(node[attr])
+            } else {
+                nodeAttrs.set(attr, [node[attr]])
+            }
         }
     })
     data.links.forEach((link) => {
         for (let attr in link) {
-            linkAttrs.add(attr)
+            if (linkAttrs.has(attr)) {
+                linkAttrs.get(attr).push(link[attr])
+            } else {
+                linkAttrs.set(attr, [link[attr]])
+            }
         }
     })
+
+    // delete unique identities
     nodeAttrs.delete('id')
     linkAttrs.delete('source')
     linkAttrs.delete('target')
-    return {
-        nodes: [...nodeAttrs],
-        links: [...linkAttrs]
-    }
-}
 
-function generateSyntheticData(
-    originData,
-    numericalStepPercent = 0.1,
-    numericalLengthThreshold = 5
-) {
-    const attrs = getAttributesOf(originData)
-    const syntheticData = { nodes: {}, links: {} }
-    const keys = Object.keys(syntheticData)
-    keys.forEach((key) => {
-        attrs[key].forEach((attr) => {
-            let range = new Set()
-            let isAllNumerical = true
-            let type = 'numerical'
-            originData[key].forEach((entity) => {
-                const value = entity[attr]
-                range.add(value)
-                if (typeof value !== 'number') {
-                    isAllNumerical = false
-                }
-            })
-            range = [...range]
-            if (!isAllNumerical || range.length <= numericalLengthThreshold) {
-                type = 'categorical'
-            } else {
-                const min = d3.min(range)
-                const max = d3.max(range)
-                range = []
-                let value = min
-                let step = numericalStepPercent * (max - min)
-                while (value <= max) {
-                    range.push(value)
-                    value += step
-                }
-            }
-            syntheticData[key][attr] = range.map((value) => {
-                const data = JSON.parse(JSON.stringify(originData))
-                for (let index in data[key]) {
-                    const entity = data[key][index]
-                    entity[attr] = value
-                }
-                return data
-            })
-
-            syntheticData[key][attr].type = type
-        })
+    nodeAttrs.forEach((value, name) => {
+        nodeAttrs.set(name, computeAttributeTypeAndRange(value))
     })
-    return syntheticData
+    linkAttrs.forEach((value, name) => {
+        linkAttrs.set(name, computeAttributeTypeAndRange(value))
+    })
+
+    return {
+        nodes: nodeAttrs,
+        links: linkAttrs
+    }
 }
 
 /**
- * get changed visual channels between two svgs
- * we assume that two svgs only differ in values of visual channels while structures are same
- * @param {html-svg-element} element1
- * @param {html-svg-element} element2
+ *
+ * @param {*} data
+ * @param {*} NUMERICAL_LENGTH_THRESHOLD
  */
-function getChangedVisualChannels(element1, element2, diff = {}) {
-    const attributesOfElement1 = new Map(
-        [...element1.attributes].map((attribute) => [attribute.name, attribute.value])
-    )
-    const attributesOfElement2 = new Map(
-        [...element2.attributes].map((attribute) => [attribute.name, attribute.value])
-    )
-    attributesOfElement1.forEach((value, name) => {
-        if (attributesOfElement2.get(name) != value) {
-            if (!diff.differences) {
-                diff.differences = new Set()
-            }
-            diff.differences.add(name)
+function computeAttributeTypeAndRange(data, NUMERICAL_LENGTH_THRESHOLD = 10) {
+    let range = []
+    let isAllNumerical = true
+    let type = NUMERICAL
+    data.forEach((value) => {
+        range.push(value)
+        if (typeof value !== 'number') {
+            isAllNumerical = false
         }
     })
-    if (element1.children.length > 0) {
-        diff.children = []
-        const childrenOfElement1 = [...element1.children]
-        const childrenOfElement2 = [...element2.children]
-        for (let i = 0; i < childrenOfElement1.length; i++) {
-            const childDiff = getChangedVisualChannels(childrenOfElement1[i], childrenOfElement2[i])
-            if (childDiff.differences || childDiff.children) {
-                diff.children.push(childDiff)
-            }
-        }
-        if (diff.children.length === 0) {
-            delete diff['children']
-        }
+    if (!isAllNumerical || range.length <= NUMERICAL_LENGTH_THRESHOLD) {
+        type = CATEGORICAL
     }
-    diff.name = element1.nodeName
-    return diff
+    return {
+        type,
+        range
+    }
 }
 
 export { detector }

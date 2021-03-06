@@ -19,11 +19,16 @@
     },
     "homepage": "https://github.com/JackieAnxis/NoLin2Text#readme",
     "dependencies": {
-        "d3": "^6.5.0"
+        "d3": "^6.5.0",
+        "dom-compare": "^0.6.0",
+        "multikeymap": "^1.0.0"
     },
     "devDependencies": {
-        "@babel/core": "^7.9.6",
+        "@babel/core": "^7.13.8",
+        "@babel/polyfill": "^7.12.1",
+        "@babel/preset-env": "^7.13.9",
         "babel-eslint": "^10.1.0",
+        "babel-loader": "^8.2.2",
         "eslint": "^7.14.0",
         "eslint-config-alloy": "^3.7.2",
         "webpack": "^4.43.0",
