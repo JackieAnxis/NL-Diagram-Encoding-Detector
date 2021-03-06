@@ -9,7 +9,11 @@ export default function dfs(obj, callback) {
             callback(index)
             if (index.children && index.children.length) {
                 const indexNext = index.children.pop()
-                index.children.forEach((child) => stack.push(child))
+                let children = index.children
+                if (!index.children.forEach) {
+                    children = Array.from(index.children)
+                }
+                children.forEach((child) => stack.push(child))
                 index = indexNext
             } else {
                 index = stack.pop()

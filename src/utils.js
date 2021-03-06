@@ -27,6 +27,52 @@ const dom = {
             return diff
         }
         return count
+    },
+    getComputedStyle: function (element) {
+        const computedStyles = window.getComputedStyle(element)
+        const style = {}
+        const BASIC_STYLES = BASIC_SVG_ELEMENTS.get(element.tagName)
+        if (BASIC_STYLES) {
+            BASIC_STYLES.forEach((channel) => {
+                style[channel] = computedStyles[channel]
+            })
+            /**
+             * transform a position with transform matrix (transformation)
+             * @param {Object} style: {tagName: 'xxx', style1: 'xx', style2: 'xx', ...}
+             * @param {String} transformation:  e.g. "matrix(1, 0, 0, 1, 10, 10)"
+             */
+            const transformed = function (style, transformation) {
+                const matrix = [1, 0, 0, 1, 0, 0]
+                if (transformation !== 'none') {
+                    matrix = transformation.slice('matrix('.length, -1).split(',').map(parseFloat)
+                }
+                function computePosition(position, matrix) {
+                    return [position[0] + matrix[4], position[1] + matrix[5]]
+                }
+                if (style.tagName == 'circle' || style.tagName == 'ellipse') {
+                    const [cx, cy] = computePosition([style.cx, style.cy], matrix)
+                    style = { ...style, cx, cy }
+                } else if (style.tagName == 'line') {
+                    const [x1, y1] = computePosition([style.x1, style.y1], matrix)
+                    const [x2, y2] = computePosition([style.x2, style.y2], matrix)
+                    style = { ...style, x1, y1, x2, y2 }
+                } else if (style.tagName === 'polygon' || style.tagName === 'polyline') {
+                    // TODO
+                    if (typeof style['points'] == 'string') {
+                        // 'points' still is a string,
+                        // transform it into an array
+                    }
+                }
+            }
+
+            // compute position, assume only translate, no rotate, no scale
+            const node = element
+            do {
+                const transformMatrix = window.getComputedStyle(node).transform
+                if (transform !== 'none') {
+                }
+            } while (node.tagName !== 'svg')
+        }
     }
 }
 

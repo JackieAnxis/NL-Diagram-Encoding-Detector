@@ -42,6 +42,7 @@ function detector(code, data) {
     }
 
     // Step2: Data Binding
+    // ! assume data are not reordered in the code
     // Step2.1:  Data Attribute <=> Visual Channel
     // change the value of each attribute in each data entity
     // test which visual channels are changed
@@ -81,16 +82,12 @@ function detector(code, data) {
         })
     })
     // Step2.2: Data Entity <=> Visual Element
-    // if no attribute will change the structure,
-    // we can get the map by deleting/adding data
-    if (!Object.keys(attr2struct.nodes).length) {
-        // for nodes
-        entity2elementMapper.ifNoStructChange.nodeMapper(data, func)
-    }
-    if (!Object.keys(attr2struct.links).length) {
-        // TODO: for links
-    }
-    // 其他情况：
+
+    // 交换某两个数据实体的某个属性，这个属性肯定不会改变结构（因为已经在step1确保）；
+    // 比较原visual channel数组和现在的这个数组。
+    // 如果这个属性只改变数值型的属性，我们假设数值型的属性的映射方式一般只会跟数据的分布相关（比如一般跟最大值最小值相关），所以我们交换数据是不会改变数据分布的，进而没有改变映射方式，所以此时只有跟交换的两个数据实体相关的visual element会被改变；
+    // 如果这个属性只改变类别型的属性。在类别型属性的映射中，可能映射方式会随着原数据的改变而发生改变（比如类别的出现顺序），交换数据可能会改变映射，虽然改变了映射方式，但我们认为曾经被编码为同一类的输入，在改变了映射的情况下仍然会被分到同一类。所以发生了类别变化的那些visual element就是这两个entity对应的。
+
     // 判断一个视觉通道是numerical还是categorical的？
     // 如果是categorical的，其unique的值会很少
     // 如果是numerical的，其unique的值会很多
@@ -100,6 +97,7 @@ function detector(code, data) {
     // 1. data0的基础上，交换 A B 的所有 attr2style 属性（保证 A 和 B 的这些属性不完全一样）；data1 svg1，对比 svg0 和 svg1，找出修改内容；该内容可能只跟A相关，可能只跟B相关，可能两者都相关；
     // 2. data0的基础上，交换 A C 的所有 attr2style 属性（保证 A 和 C 的这些属性不完全一样）；data2 svg2，对比 svg0 和 svg1，找出修改内容；该内容可能只跟A相关，可能只跟C相关，可能两者都相关；
     // 3. 分析1和2中的修改内容，相同部分为A，不相同部分为B和C；
+
     // 若存在： categorical 的视觉通道：只有数据顺序（出现）会影响映射方式，只改，不换；
     //
 
