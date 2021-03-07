@@ -1,5 +1,37 @@
 import { BASIC_SVG_ELEMENTS } from './global'
-import dfs from './dfs'
+import { dom, object } from './utils'
+
+export class NLDCompDiff {
+    constructor() {
+        this.array = []
+    }
+    isItemEmpty(item) {
+        if (item?.tagName) {
+            // tagName different
+            return false
+        } else {
+            if (item?.style) {
+                if (Object.keys(item.style).length > 0) {
+                    // and something is in item.style
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    isEmpty() {
+        return this.array.every(this.isItemEmpty)
+    }
+    getIndexOfDifferences() {
+        const indexes = []
+        this.array.forEach((item, i) => {
+            if (!this.isItemEmpty(item)) {
+                indexes.push(i)
+            }
+        })
+        return indexes
+    }
+}
 
 export class NLDComponents {
     // node link diagram components
@@ -10,19 +42,15 @@ export class NLDComponents {
             // styleTree (visual channel tree):
             // { name: String, style: {String => Any}, children: [{...}, ...]}
             const basicElementArray = []
-            dfs(svg, function (element) {
-                // only keep basic
+            object.dfs(svg, function (element) {
+                // compute styles (include tagName), only keep basic
                 if (BASIC_SVG_ELEMENTS.has(element.tagName)) {
-                    const item = {}
-                    // it is a basic visual element
-                    item.tagName = element.tagName
-                    const style = window.getComputedStyle(element)
-                    // TODO for position attribute, plese compute bounding box
-                    const BASIC_STYLES = BASIC_SVG_ELEMENTS.get(element.tagName)
-                    BASIC_STYLES.forEach((channel) => {
-                        item[channels] = style[channel]
+                    const style = dom.getComputedStyle(element)
+                    basicElementArray.push({
+                        tagName: element.tagName,
+                        element,
+                        style
                     })
-                    basicElementArray.push(item)
                 }
             })
             this.basicElementArray = basicElementArray
@@ -30,26 +58,15 @@ export class NLDComponents {
         }
     }
 
-    isEmpty() {
-        let isEmpty = true
-        this.basicElementArray.forEach((element) => {
-            if (element && Object.keys(element).length) {
-                isEmpty = false
-            }
-        })
-        return isEmpty
-    }
-
     /**
-     * Assume two arrays are equilong (equal length),
+     * !Assume two arrays are equilong (equal length) and the sequences are same,
      * compare whether this NLDComponents is diff with anotherNLDComponents.
      * Only compare whether some styles of a basic svg element are different
      * @param {NLDComponents} anotherNLDComponents
      * @return {NLDComponents} diff: a NLDComponents which only stores differences
      */
     diffWith(anotherNLDComponents) {
-        const diff = new NLDComponents()
-        diff.basicElementArray = []
+        const diff = new NLDCompDiff()
         const n = Math.min(
             this.basicElementArray.length,
             anotherNLDComponents.basicElementArray.length
@@ -57,21 +74,28 @@ export class NLDComponents {
         for (let i = 0; i < n; i++) {
             const ele1 = this.basicElementArray[i]
             const ele2 = anotherNLDComponents.basicElementArray[i]
-            const eleDiff = {}
-            Object.keys(ele1).forEach((channel) => {
-                if (ele1.tagName == ele2.tagName) {
-                    if (ele1[channel] !== ele2[channel]) {
-                        eleDiff[channel] = true
+            const eleDiff = undefined
+            if (ele1.tagName == ele2.tagName) {
+                const channels = new Set(Object.keys(ele1.style).concat(Object.keys(ele2.style)))
+                channels.forEach((channel) => {
+                    if (!object.isEqual(ele1.style[channel], ele2.style[channel])) {
+                        if (!eleDiff) {
+                            eleDiff = { style: {} }
+                        }
+                        eleDiff.style[channel] = true
                     }
-                } else {
-                    // TODO
-                }
-            })
+                })
+            } else {
+                eleDiff = { tagName: true }
+                // TODO, if the tagName is changed
+            }
+            diff.array.push(eleDiff)
         }
         return diff
     }
 
     /**
+     * TODO: modify it from tree to array
      * eliminate unstable channels from this style tree
      * only remain stable channels
      * @param {BasicStyleTree} unstableStyleTree

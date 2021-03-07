@@ -11,10 +11,7 @@ import MultiKeyMap from 'multikeymap'
 
 import compare from './compare'
 import { object } from './utils'
-import * as entity2elementMapper from './entity2elementMapper'
-
-const CATEGORICAL = 'categorical'
-const NUMERICAL = 'numerical'
+import * as entity2element from './entity2element'
 
 /**
  *
@@ -28,61 +25,16 @@ function detector(code, data) {
     // Step1: Eliminate random encoding
     const svg = func(d3, object.deepcopy(data))
     const svgBeta = func(d3, object.deepcopy(data))
-    const diffTree = compare(svg, svgBeta)
-    let unstableStyleTree = undefined
+    const unstableElements = compare(svg, svgBeta)
     // if diff is not an empty object
     // it means some visual channels are not stable (it means random, same inputs lead to different outputs)
-    if (!diffTree) {
+    if (!unstableElements.isEmpty()) {
         console.error('The input code is unstable.')
         return false
     }
 
-    if (!diffTree.isEmpty()) {
-        unstableStyleTree = diffTree
-    }
-
-    // Step2: Data Binding
-    // ! assume data are not reordered in the code
-    // Step2.1:  Data Attribute <=> Visual Channel
-    // change the value of each attribute in each data entity
-    // test which visual channels are changed
-    const attrs = getAttributesOf(data) // TODO add some measures: degree...
-    const attr2style = { nodes: {}, links: {} } // attributes that change visual channels
-    const attr2struct = { nodes: {}, links: {} } // attributes that change structures (tagName or # of elements)
-    const keys = ['nodes', 'links']
-    keys.forEach((key) => {
-        attrs[key].forEach((attrInfo, attrName) => {
-            const clonedData = object.deepcopy(data)
-            // randomize attribute value
-            const range = d3.shuffle(attrInfo.range.slice())
-            if (range.length !== clonedData[key].length) {
-                console.error('Lenght not equal.')
-            }
-            clonedData[key].forEach((ele, i) => {
-                ele[attrName] = range[i]
-            })
-
-            // generate new function
-            const clonedSVG = func(d3, clonedData)
-            let diffChannels = compare(svg, clonedSVG)
-            if (diffChannels && !diffChannels.isEmpty()) {
-                if (unstableStyleTree) {
-                    diffChannels.eliminate(unstableStyleTree)
-                }
-                attr2style[key][attrName] = diffChannels
-            } else {
-                // cannot compare, the structure is changed
-                // juedge whether only encode tagName or encode # of elements
-                // TODO
-                attr2struct[key][attrName] = true
-                console.warn(
-                    `Structures are different after change attribute (${attrName}) of ${key}`
-                )
-            }
-        })
-    })
-    // Step2.2: Data Entity <=> Visual Element
-
+    // Step2: Map links to Elements
+    entity2element.ifNoStructChange.linkMapper(data, func)
     // 交换某两个数据实体的某个属性，这个属性肯定不会改变结构（因为已经在step1确保）；
     // 比较原visual channel数组和现在的这个数组。
     // 如果这个属性只改变数值型的属性，我们假设数值型的属性的映射方式一般只会跟数据的分布相关（比如一般跟最大值最小值相关），所以我们交换数据是不会改变数据分布的，进而没有改变映射方式，所以此时只有跟交换的两个数据实体相关的visual element会被改变；
@@ -99,14 +51,6 @@ function detector(code, data) {
     // 3. 分析1和2中的修改内容，相同部分为A，不相同部分为B和C；
 
     // 若存在： categorical 的视觉通道：只有数据顺序（出现）会影响映射方式，只改，不换；
-    //
-
-    console.log(attr2style)
-
-    // DONE 1: style
-    // TODO 2: compress data
-    // TODO 3: correlation (positive or negative or ...)
-    // TODO 4: SVG encoder decoder
 }
 
 /**
@@ -272,75 +216,6 @@ function computeRelatedVisualChannels(data, func) {
         })
     })
     return relatedVisualChannels
-}
-
-/**
- * get attributes of nodes and links
- * @param {standard node-link data format} data
- * @returns {nodes: node attributes array, links: link attributes array}
- */
-function getAttributesOf(data) {
-    const nodeAttrs = new Map()
-    const linkAttrs = new Map()
-    data.nodes.forEach((node) => {
-        for (let attr in node) {
-            if (nodeAttrs.has(attr)) {
-                nodeAttrs.get(attr).push(node[attr])
-            } else {
-                nodeAttrs.set(attr, [node[attr]])
-            }
-        }
-    })
-    data.links.forEach((link) => {
-        for (let attr in link) {
-            if (linkAttrs.has(attr)) {
-                linkAttrs.get(attr).push(link[attr])
-            } else {
-                linkAttrs.set(attr, [link[attr]])
-            }
-        }
-    })
-
-    // delete unique identities
-    nodeAttrs.delete('id')
-    linkAttrs.delete('source')
-    linkAttrs.delete('target')
-
-    nodeAttrs.forEach((value, name) => {
-        nodeAttrs.set(name, computeAttributeTypeAndRange(value))
-    })
-    linkAttrs.forEach((value, name) => {
-        linkAttrs.set(name, computeAttributeTypeAndRange(value))
-    })
-
-    return {
-        nodes: nodeAttrs,
-        links: linkAttrs
-    }
-}
-
-/**
- *
- * @param {*} data
- * @param {*} NUMERICAL_LENGTH_THRESHOLD
- */
-function computeAttributeTypeAndRange(data, NUMERICAL_LENGTH_THRESHOLD = 10) {
-    let range = []
-    let isAllNumerical = true
-    let type = NUMERICAL
-    data.forEach((value) => {
-        range.push(value)
-        if (typeof value !== 'number') {
-            isAllNumerical = false
-        }
-    })
-    if (!isAllNumerical || range.length <= NUMERICAL_LENGTH_THRESHOLD) {
-        type = CATEGORICAL
-    }
-    return {
-        type,
-        range
-    }
 }
 
 export { detector }
