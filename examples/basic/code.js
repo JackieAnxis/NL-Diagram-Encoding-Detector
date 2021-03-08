@@ -1,9 +1,5 @@
 const width = 800
 const height = 600
-const color = (function () {
-    const scale = d3.scaleOrdinal(d3.schemeCategory10)
-    return (d) => scale(d.group)
-})()
 
 const links = data.links.map((d) => Object.create(d))
 const nodes = data.nodes.map((d) => Object.create(d))
@@ -37,6 +33,13 @@ const drag = (simulation) => {
 
     return d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended)
 }
+
+// node color
+const color = (function () {
+    const groups = Array.from(new Set(data.nodes.map((d) => d.group))).sort(d3.ascending)
+    const colors = d3.schemeCategory10
+    return (d) => colors[groups.indexOf(d.group)]
+})()
 
 const svg = d3.create('svg').attr('viewBox', [0, 0, width, height])
 

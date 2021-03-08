@@ -11,7 +11,7 @@ import MultiKeyMap from 'multikeymap'
 
 import compare from './compare'
 import { object } from './utils'
-import * as entity2element from './entity2element'
+import entity2element from './entity2element'
 
 /**
  *
@@ -34,7 +34,9 @@ function detector(code, data) {
     }
 
     // Step2: Map links to Elements
-    entity2element.ifNoStructChange.linkMapper(data, func)
+    const link2element = entity2element(data, func, 'links')
+    const node2element = entity2element(data, func, 'nodes')
+    // TODO: delete link from node (if node attribute encodes position)
     // 交换某两个数据实体的某个属性，这个属性肯定不会改变结构（因为已经在step1确保）；
     // 比较原visual channel数组和现在的这个数组。
     // 如果这个属性只改变数值型的属性，我们假设数值型的属性的映射方式一般只会跟数据的分布相关（比如一般跟最大值最小值相关），所以我们交换数据是不会改变数据分布的，进而没有改变映射方式，所以此时只有跟交换的两个数据实体相关的visual element会被改变；

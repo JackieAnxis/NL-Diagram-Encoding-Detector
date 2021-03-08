@@ -38,9 +38,9 @@ export class NLDComponents {
     constructor(svg) {
         if (svg) {
             this.osvg = svg // origin svg
+
+            // compute style
             document.body.appendChild(svg)
-            // styleTree (visual channel tree):
-            // { name: String, style: {String => Any}, children: [{...}, ...]}
             const basicElementArray = []
             object.dfs(svg, function (element) {
                 // compute styles (include tagName), only keep basic
