@@ -20,8 +20,7 @@
     "homepage": "https://github.com/JackieAnxis/NoLin2Text#readme",
     "dependencies": {
         "d-path-parser": "^1.0.0",
-        "d3": "^6.5.0",
-        "multikeymap": "^1.0.0"
+        "d3": "^6.5.0"
     },
     "devDependencies": {
         "@babel/core": "^7.13.8",
