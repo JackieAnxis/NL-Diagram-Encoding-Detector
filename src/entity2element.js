@@ -67,7 +67,7 @@ export default function entity2element(graph, func, entityType) {
                         entitiesWithDiffAttr_INDEX.push(j)
                     }
                 })
-                return entitiesWithDiffAttr_INDEX.slice(0, 2)
+                return entitiesWithDiffAttr_INDEX.slice(0, 2) // TODO it is a balance with performance and precision
             }
 
             // Step2.2.2 swap thisEntity with each of entities with different attribute
