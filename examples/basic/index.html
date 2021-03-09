@@ -11,6 +11,9 @@
         d3.text('code.js').then(function (code) {
             d3.json('miserables.json').then(function (json) {
                 const data = json
+                const func = new Function('d3', 'data', code)
+                const svg = func(d3, data)
+                document.body.appendChild(svg)
                 NoLin2Text.detector(code, data)
             })
         })

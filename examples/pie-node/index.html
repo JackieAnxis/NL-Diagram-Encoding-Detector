@@ -12,7 +12,12 @@
         d3.text('code.js').then(function (code) {
             d3.json('miserables.json').then(function (json) {
                 const data = json
-                NoLin2Text.detector(code, data)
+                const func = new Function('d3', 'data', code)
+                const svg = func(d3, data)
+                document.body.appendChild(svg)
+                setTimeout(() => {
+                    NoLin2Text.detector(code, data)
+                }, 500)
             })
         })
     </script>

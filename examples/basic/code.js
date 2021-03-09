@@ -21,7 +21,11 @@ const color = (function () {
     return (d) => colors[groups.indexOf(d.group)]
 })()
 
-const svg = d3.create('svg').attr('viewBox', [0, 0, width, height])
+const svg = d3
+    .create('svg')
+    .attr('viewBox', [0, 0, width, height])
+    .attr('width', width)
+    .attr('height', height)
 
 const link = svg
     .append('g')

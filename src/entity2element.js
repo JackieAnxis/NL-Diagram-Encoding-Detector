@@ -15,8 +15,8 @@ export default function entity2element(graph, func, entityType) {
     const unstableComponents = compare(svg, svgBeta)
 
     // Step2: Get the Mapping
-    const entity2element = new Array(graph[entityType].length)
-    const attribute2channel = new Array(graph[entityType].length)
+    const entity2element = new Array(graph[entityType].length) // : [[entityIndex]: Set(elementIndex)]
+    const attribute2channel = new Array(graph[entityType].length) // : [[entityIndex]: {[entityAttributeName]: Map(elementIndex <=> {elementIndex, style:{[channelName]: Boolean}})}]
     const attributes = NoLinDiagram.getAttributesOf(graph) /* Map(name <=> {entityType, range}) */
     const svgOrigin = func(d3, object.deepcopy(graph))
     for (let [name, { type, range }] of attributes[entityType].entries()) {
@@ -41,192 +41,105 @@ export default function entity2element(graph, func, entityType) {
         // swap one of the attributes of two entities
         // we assume that it will not change the element sequence
         for (let i = 0; i < graph[entityType].length; i++) {
-            let canNotFind = false
+            console.log(
+                `%c For %c${entityType}%c's attribute[%c${name}%c], computing %c${entityType}%c[%c${i}/${graph[entityType].length}%c]'s encoding...`,
+                'background: #222; color: #bada55',
+                'background: #222; color: #d94e54',
+                'background: #222; color: #bada55',
+                'background: #222; color: #d94e54',
+                'background: #222; color: #bada55',
+                'background: #222; color: #d94e54',
+                'background: #222; color: #bada55',
+                'background: #222; color: #d94e54',
+                'background: #222; color: #bada55'
+            )
+
             let clonedGraph = object.deepcopy(graph)
-            let attributeI = clonedGraph[entityType][i][name]
-            let j = (i + 1) % graph[entityType].length
-            let attributeJ = clonedGraph[entityType][j][name]
-            let indexofSwapIJDiff = undefined
+            let thisEntity = clonedGraph[entityType][i]
             let svgControl = svgOrigin
-            let svgSwapped
-            let swapIJDiff, swapIKDiff
-            do {
-                while (object.isEqual(attributeI, attributeJ)) {
-                    // find some entities[j] which does not have an attribute[name] same with entities[i]
-                    j = (j + 1) % graph[entityType].length
-                    attributeJ = clonedGraph[entityType][j][name]
-                    if (i == j) {
-                        if (indexofSwapIJDiff) {
-                            // if find indexofSwapIJDiff, but it is empty
-                            console.error(
-                                `Attribute: ${name} of all ${entityType} encode into the same visual channel, can not detect which visual channel encodes it.`
-                            )
-                            canNotFind = true
-                            break
-                        } else {
-                            console.error(
-                                `All ${entityType} have same attribute: ${name}, can not detect which visual channel encodes it.`
-                            )
-                            canNotFind = true
-                            break
-                        }
-                    }
-                }
 
-                if (canNotFind) {
-                    break
-                }
-
-                // swap attribute[name] of entities[i] and entitie[j]
-                clonedGraph[entityType][i][name] = attributeJ
-                clonedGraph[entityType][j][name] = attributeI
-
-                svgSwapped = func(d3, object.deepcopy(clonedGraph))
-                swapIJDiff = compare(svgControl, svgSwapped)
-                if (!unstableComponents.isEmpty()) {
-                    swapIJDiff.eliminate(unstableComponents)
-                }
-                indexofSwapIJDiff = swapIJDiff.getIndexOfDifferences()
-                if (!indexofSwapIJDiff.length) {
-                    // no diff, find another j
-                    j = (j + 1) % graph[entityType].length
-                    if (i == j) {
-                        console.error(
-                            `Cannot produce any difference by swapping ${entityType}[${i}] and any other ${entityType.slice(
-                                0,
-                                -1
-                            )}`
-                        )
-                        canNotFind = true
-                        break
-                    }
-                }
-            } while (indexofSwapIJDiff.length == 0)
-
-            if (canNotFind) {
-                break
-            }
-
-            // swap entity[i] and entity[k]
-            attributeI = clonedGraph[entityType][i][name] // new value
-            let k = (i + 1) % graph[entityType].length
-            let attributeK = clonedGraph[entityType][k][name]
-            let indexofSwapIKDiff
-            let isReset = false
-            svgControl = svgSwapped
-            function reset() {
-                isReset = true
-                clonedGraph = object.deepcopy(graph)
-                k = (i + 1) % graph[entityType].length
-                attributeI = clonedGraph[entityType][i][name]
-                attributeK = clonedGraph[entityType][k][name]
-                svgControl = svgOrigin
-            }
-            do {
-                while (object.isEqual(attributeI, attributeK) || k == j) {
-                    // find some link[k] which does not have an attribute[name] with link[i]
-                    k = (k + 1) % graph[entityType].length
-                    attributeK = clonedGraph[entityType][k][name]
-                    if (i == k) {
-                        if (!isReset) {
-                            // not find any link that has different attribute[name] with link[i]
-                            // reset the clonedGraph, and find it again
-                            reset()
-                            continue
-                        } else {
-                            if (indexofSwapIKDiff) {
-                                // if find indexofSwapIKDiff, but it is empty
-                                console.error(
-                                    `Attribute: ${name} of all ${entityType} encode into the same visual channel, can not detect which visual channel encodes it.`
-                                )
-                                canNotFind = true
-                                break
-                            } else {
-                                console.error(
-                                    `All ${entityType} have same attribute: ${name}, can not detect which visual channel encodes it.`
-                                )
-                                canNotFind = true
-                                break
-                            }
-                        }
-                    }
-                }
-
-                if (canNotFind) {
-                    break
-                }
-
-                // swap attribute[name] of links[i] and links[k]
-                clonedGraph[entityType][i][name] = attributeK
-                clonedGraph[entityType][k][name] = attributeI
-
-                svgSwapped = func(d3, object.deepcopy(clonedGraph))
-                swapIKDiff = compare(svgControl, svgSwapped)
-                if (!unstableComponents.isEmpty()) {
-                    swapIKDiff.eliminate(unstableComponents)
-                }
-                indexofSwapIKDiff = swapIKDiff.getIndexOfDifferences()
-                if (!indexofSwapIKDiff.length) {
-                    // no diff, find another k
-                    k = (k + 1) % graph[entityType].length
-                    if (i == k) {
-                        if (!isReset) {
-                            reset()
-                        } else {
-                            console.error(
-                                `Cannot produce any difference by swapping ${entityType}[${i}] and any other ${entityType.slice(
-                                    0,
-                                    -1
-                                )}`
-                            )
-                            canNotFind = true
-                            break
-                        }
-                    }
-                }
-            } while (indexofSwapIJDiff.length == 0)
-
-            if (canNotFind) {
-                break
-            }
-
-            if (!entity2element[i]) {
-                entity2element[i] = new Set()
-                for (let ij in indexofSwapIJDiff) {
-                    for (let ik in indexofSwapIKDiff) {
-                        if (indexofSwapIJDiff[ij] == indexofSwapIKDiff[ik]) {
-                            entity2element[i].add(indexofSwapIKDiff[ik])
-                        }
-                    }
-                }
-            }
-
-            // Step2.3 Get the attribute2channel Mapping
-            // find the changed visual channels
-            if (!attribute2channel[i]) {
-                attribute2channel[i] = {}
-            }
-            const changedElementsWithChannels = new Map()
-            entity2element[i].forEach((index) => {
-                const diffs = [swapIJDiff.array[index], swapIKDiff.array[index]]
-                const change = {}
-                diffs.forEach((diff) => {
-                    if (diff?.tagName) {
-                        change.tagName = true
-                    }
-                    if (diff && diff.style) {
-                        if (!change.style) {
-                            change.style = {}
-                        }
-                        for (let channel in diff.style) {
-                            change.style[channel] = true
-                        }
+            // Step2.2.1 find all entities that don't have same attribute[name] with entities[i]
+            let entitiesWithDiffAttr_INDEX = findEntitiesWithDiffAttr_INDEX(thisEntity, clonedGraph)
+            function findEntitiesWithDiffAttr_INDEX(thisEntity, graph) {
+                let entitiesWithDiffAttr_INDEX = [] // entities with different attribute (just stores index)
+                graph[entityType].forEach((entity, j) => {
+                    if (!object.isEqual(thisEntity[name], entity[name])) {
+                        entitiesWithDiffAttr_INDEX.push(j)
                     }
                 })
-                change.elementIndex = index
-                changedElementsWithChannels.set(index, change)
+                return entitiesWithDiffAttr_INDEX.slice(0, 2)
+            }
+
+            // Step2.2.2 swap thisEntity with each of entities with different attribute
+            if (entitiesWithDiffAttr_INDEX.length == 0) {
+                debugger // some thing wrong, all entities have same attribute[name]
+            } else if (entitiesWithDiffAttr_INDEX.length == 1) {
+                // first swap with the diff entity
+                const j = entitiesWithDiffAttr_INDEX[0]
+                const attributeI = clonedGraph[entityType][i][name]
+                clonedGraph[entityType][i][name] = clonedGraph[entityType][j][name]
+                clonedGraph[entityType][j][name] = attributeI
+                thisEntity = clonedGraph[entityType][i]
+                // second re-find entities with different attribute
+                entitiesWithDiffAttr_INDEX = findEntitiesWithDiffAttr_INDEX(thisEntity, clonedGraph)
+                // if still only one entity diff with thisEntity, can not deal with such case
+                if (entitiesWithDiffAttr_INDEX.length == 1) {
+                    console.error(
+                        `Cannot deal with ${entityType}[${i}], only one ${entityType.slice(
+                            0,
+                            -1
+                        )} diffs with it.`
+                    )
+                    continue
+                } else {
+                    // re-generate the control group svg
+                    svgControl = func(d3, object.deepcopy(clonedGraph))
+                }
+            }
+            // swap this entity with any other diff entities
+            const elementFrequency = {}
+            entitiesWithDiffAttr_INDEX.forEach((entityIndex) => {
+                const entity = clonedGraph[entityType][entityIndex]
+                let attributeI = thisEntity[name]
+                thisEntity[name] = entity[name]
+                entity[name] = attributeI
+
+                let svgSwapped = func(d3, object.deepcopy(clonedGraph))
+                let swapDiff = compare(svgControl, svgSwapped)
+                if (!unstableComponents.isEmpty()) {
+                    swapDiff.eliminate(unstableComponents)
+                }
+                let indexofSwapDiff = swapDiff.getIndexOfDifferences()
+                indexofSwapDiff.forEach((elementIndex) => {
+                    if (!elementFrequency[elementIndex]) {
+                        elementFrequency[elementIndex] = 0
+                    }
+                    elementFrequency[elementIndex] += 1
+                    if (elementFrequency[elementIndex] >= 2) {
+                        // occurs more than once, it should be entity[i]'s element
+                        if (!entity2element[i]) {
+                            entity2element[i] = new Set()
+                        }
+                        entity2element[i].add(elementIndex)
+
+                        // Step2.3 Record the changed visual channels
+                        if (!attribute2channel[i]) {
+                            attribute2channel[i] = {}
+                        }
+                        if (!attribute2channel[i][name]) {
+                            attribute2channel[i][name] = {}
+                        }
+
+                        const diffElement = object.deepcopy(swapDiff.array[elementIndex])
+                        attribute2channel[i][name][elementIndex] = diffElement
+                    }
+                })
+
+                // swap back
+                attributeI = thisEntity[name]
+                thisEntity[name] = entity[name]
+                entity[name] = attributeI
             })
-            attribute2channel[i][name] = changedElementsWithChannels
         }
     }
     return [entity2element, attribute2channel]

@@ -61,6 +61,12 @@ export const dom = {
                     element.y2.baseVal.value
                 ])
                 style = { ...style, x1, y1, x2, y2 }
+            } else if (element.tagName == 'rect') {
+                const [x, y] = getComputedPosition(element, [
+                    element.x.baseVal.value,
+                    element.y.baseVal.value
+                ])
+                style = { ...style, x, y }
             } else if (element.tagName === 'polygon' || element.tagName === 'polyline') {
                 const points = Array.from(element.points).map(({ x, y }) =>
                     getComputedPosition(element, [x, y])
@@ -87,13 +93,11 @@ export const dom = {
                 let thisNode = element
                 let [x, y] = position
                 do {
-                    const matrixString = window.getComputedStyle(thisNode).transform
-                    let matrix = [1, 0, 0, 1, 0, 0]
-                    if (matrixString !== 'none') {
-                        matrix = matrixString.slice('matrix('.length, -1).split(',').map(parseFloat)
+                    if (element.transform.baseVal.length) {
+                        const matrix = element.transform.baseVal[0].matrix
+                        x += matrix.e
+                        y += matrix.f
                     }
-                    x += matrix[4]
-                    y += matrix[5]
                     thisNode = thisNode.parentNode
                 } while (thisNode.tagName !== 'svg')
                 return [x, y]

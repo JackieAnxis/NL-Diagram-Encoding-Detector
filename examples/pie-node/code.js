@@ -1,226 +1,71 @@
-var width = 960
-var height = 600
-var graph = data
-var svg = d3.create('svg').attr('viewBox', [0, 0, width, height])
+const width = 800
+const height = 600
 
-var color = d3
-    .scaleOrdinal()
-    .range([
-        '#1f77b4',
-        '#aec7e8',
-        '#ff7f0e',
-        '#ffbb78',
-        '#2ca02c',
-        '#98df8a',
-        '#d62728',
-        '#ff9896',
-        '#9467bd',
-        '#c5b0d5',
-        '#8c564b',
-        '#c49c94',
-        '#e377c2',
-        '#f7b6d2',
-        '#7f7f7f',
-        '#c7c7c7',
-        '#bcbd22',
-        '#dbdb8d',
-        '#17becf',
-        '#9edae5'
-    ])
-
-var DEFAULT_OPTIONS = {
-    radius: 20,
-    outerStrokeWidth: 10,
-    parentNodeColor: 'blue',
-    showPieChartBorder: true,
-    pieChartBorderColor: 'white',
-    pieChartBorderWidth: 2,
-    showLabelText: false,
-    labelText: 'text',
-    labelColor: 'blue'
-}
-
-function getOptionOrDefault(key, options, defaultOptions) {
-    defaultOptions = defaultOptions || DEFAULT_OPTIONS
-    if (options && key in options) {
-        return options[key]
-    }
-    return defaultOptions[key]
-}
-
-function drawParentCircle(nodeElement, options) {
-    var outerStrokeWidth = getOptionOrDefault('outerStrokeWidth', options)
-    var radius = getOptionOrDefault('radius', options)
-    var parentNodeColor = getOptionOrDefault('parentNodeColor', options)
-
-    nodeElement
-        .insert('circle')
-        .attr('id', 'parent-pie')
-        .attr('r', radius)
-        .attr('fill', function (d) {
-            return parentNodeColor
-        })
-        .attr('stroke', function (d) {
-            return parentNodeColor
-        })
-        .attr('stroke-width', outerStrokeWidth)
-}
-
-function drawPieChartBorder(nodeElement, options) {
-    var radius = getOptionOrDefault('radius', options)
-    var pieChartBorderColor = getOptionOrDefault('pieChartBorderColor', options)
-    var pieChartBorderWidth = getOptionOrDefault('pieChartBorderWidth', options)
-
-    nodeElement
-        .insert('circle')
-        .attr('r', radius)
-        .attr('fill', 'transparent')
-        .attr('stroke', pieChartBorderColor)
-        .attr('stroke-width', pieChartBorderWidth)
-}
-
-function drawPieChart(nodeElement, percentages, options) {
-    var radius = getOptionOrDefault('radius', options)
-    var halfRadius = radius / 2
-    var halfCircumference = 2 * Math.PI * halfRadius
-
-    var percentToDraw = 0
-    for (var p in percentages) {
-        percentToDraw += percentages[p]
-
-        nodeElement
-            .insert('circle', '#parent-pie + *')
-            .attr('r', halfRadius)
-            .attr('fill', 'transparent')
-            .style('stroke', color(p))
-            .style('stroke-width', radius)
-            .style(
-                'stroke-dasharray',
-                (halfCircumference * percentToDraw) / 100 + ' ' + halfCircumference
-            )
-    }
-}
-
-function drawTitleText(nodeElement, options) {
-    var radius = getOptionOrDefault('radius', options)
-    var text = getOptionOrDefault('labelText', options)
-    var color = getOptionOrDefault('labelColor', options)
-
-    nodeElement
-        .append('text')
-        .text(String(text))
-        .attr('fill', color)
-        .attr('dy', radius * 2)
-}
-
-var NodePieBuilder = {
-    drawNodePie: function (nodeElement, percentages, options) {
-        drawParentCircle(nodeElement, options)
-
-        if (!percentages) return
-        drawPieChart(nodeElement, percentages, options)
-
-        var showLabelText = getOptionOrDefault('showLabelText', options)
-        if (showLabelText) {
-            drawTitleText(nodeElement, options)
-        }
-    }
-}
-
-var simulation = d3
-    .forceSimulation()
-    .force(
-        'link',
-        d3.forceLink().id(function (d) {
-            return d.id
-        })
-    )
-    .force('charge', d3.forceManyBody())
-    .force('center', d3.forceCenter(width / 2, height / 2))
-
-var link = svg
-    .append('g')
-    .attr('class', 'links')
-    .selectAll('line')
-    .data(graph.links)
-    .enter()
-    .append('line')
-    .attr('stroke-width', function (d) {
-        return Math.sqrt(d.value)
-    })
-
-var node = svg
-    .append('g')
-    .attr('class', 'nodes')
-    .selectAll('g')
-    .data(graph.nodes)
-    .enter()
-    .append('g')
-    .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended))
-
-// var circles = node.append("circle")
-//     .attr("r", 5)
-//     .attr("fill", function(d) { return color(d.group); })
-
-// var lables = node.append("text")
-//     .text(function(d) {
-//       return d.id;
-//     })
-//     .attr('x', 6)
-//     .attr('y', 3);
-
-// node.append("title")
-//     .text(function(d) { return d.id; });
-
-node.each(function (d) {
-    NodePieBuilder.drawNodePie(d3.select(this), d.percent, {
-        radius: 10,
-        parentNodeColor: color(d.group),
-        outerStrokeWidth: 2,
-        showLabelText: true,
-        labelText: d.id,
-        labelColor: color(d.group)
-    })
+const id2node = new Map()
+const nodes = data.nodes.map((d) => {
+    const n = Object.create(d)
+    id2node.set(d.id, n)
+    return n
 })
 
-simulation.nodes(graph.nodes).on('tick', ticked)
+const links = data.links.map((d) => ({
+    value: d.value,
+    source: id2node.get(d.source),
+    target: id2node.get(d.target)
+}))
 
-simulation.force('link').links(graph.links)
+const colors = d3.schemeCategory10
 
-function ticked() {
-    link.attr('x1', function (d) {
-        return d.source.x
+const svg = d3
+    .create('svg')
+    .attr('viewBox', [0, 0, width, height])
+    .attr('width', width)
+    .attr('height', height)
+
+const link = svg
+    .append('g')
+    .attr('stroke', '#999')
+    .attr('stroke-opacity', 0.6)
+    .selectAll('line')
+    .data(links)
+    .join('line')
+    .attr('stroke-width', (d) => Math.sqrt(d.value))
+
+const node = svg
+    .append('g')
+    .attr('stroke', '#fff')
+    .attr('stroke-width', 1.5)
+    .selectAll('circle')
+    .data(nodes)
+    .join('g')
+    .each(function (d) {
+        const g = d3.select(this)
+        const size = [10, 10]
+        const percents = d.percents
+        g.selectAll('rect')
+            .data(percents)
+            .enter()
+            .append('rect')
+            .attr('x', -size[0] / 2)
+            .attr('y', (d, i) => {
+                return (d3.sum(percents.slice(0, i)) / 100) * size[1] - size[1] / 2
+            })
+            .attr('width', size[0])
+            .attr('height', (d) => {
+                const height = size[1] * (d / 100)
+                return height
+            })
+            .attr('fill', (_, i) => colors[i])
+            .attr('stroke-width', 1)
     })
-        .attr('y1', function (d) {
-            return d.source.y
-        })
-        .attr('x2', function (d) {
-            return d.target.x
-        })
-        .attr('y2', function (d) {
-            return d.target.y
-        })
 
-    node.attr('transform', function (d) {
-        return 'translate(' + d.x + ',' + d.y + ')'
-    })
-}
+node.append('title').text((d) => d.id)
 
-function dragstarted(d) {
-    if (!d3.event.active) simulation.alphaTarget(0.3).restart()
-    d.fx = d.x
-    d.fy = d.y
-}
+link.attr('x1', (d) => d.source.x)
+    .attr('y1', (d) => d.source.y)
+    .attr('x2', (d) => d.target.x)
+    .attr('y2', (d) => d.target.y)
 
-function dragged(d) {
-    d.fx = d3.event.x
-    d.fy = d3.event.y
-}
-
-function dragended(d) {
-    if (!d3.event.active) simulation.alphaTarget(0)
-    d.fx = null
-    d.fy = null
-}
+node.attr('transform', (d) => `translate(${d.x}, ${d.y})`)
 
 return svg.node()
