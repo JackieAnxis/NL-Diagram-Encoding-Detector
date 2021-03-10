@@ -10,6 +10,18 @@ const COMMON_STYLE_CHANNELS = new Set([
     'stroke-width', // great, numerical
     'transform' // great, numerical
 ])
+
+const DEFAULT_ATTRIBUTE = {
+    "fill": [255, 255, 255, 1],
+    'fill-opacity': 1,
+    'stroke': [255, 255, 255, 1],
+    'stroke-dasharray': 'none',
+    'stroke-opacity': 1,
+    'transform': 'none',
+    'rx': 'auto',
+    'ry': 'auto',
+}
+
 const BASIC_SVG_ELEMENTS = new Map([
     ['circle', ['r']], // great, numerical
     ['ellipse', ['rx', 'ry']], // great, numerical
@@ -23,4 +35,4 @@ BASIC_SVG_ELEMENTS.forEach((attributes, name) => {
     attributes = attributes.concat([...COMMON_STYLE_CHANNELS])
     BASIC_SVG_ELEMENTS.set(name, new Set(attributes))
 })
-export { BASIC_SVG_ELEMENTS, COMMON_STYLE_CHANNELS }
+export { BASIC_SVG_ELEMENTS, COMMON_STYLE_CHANNELS, DEFAULT_ATTRIBUTE }
