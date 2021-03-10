@@ -19,6 +19,7 @@
     },
     "homepage": "https://github.com/JackieAnxis/NoLin2Text#readme",
     "dependencies": {
+        "color-rgba": "^2.2.3",
         "d-path-parser": "^1.0.0",
         "d3": "^6.5.0"
     },

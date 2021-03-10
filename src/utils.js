@@ -5,11 +5,25 @@
  * @modify date 2021-03-07 20:19:00
  * @desc [description]
  */
-import { BASIC_SVG_ELEMENTS } from './global'
+import { BASIC_SVG_ELEMENTS, DEFAULT_ATTRIBUTE } from './global'
 // import { parse as pathParser } from 'd-path-parser'
+import rgba from 'color-rgba'
 
 export const NUMERICAL = 'NUMERICAL'
 export const CATEGORICAL = 'CATEGORICAL'
+
+
+// parse attributes
+const attrValueParser = (value) => {
+    if (rgba(value).length == 4) {
+        // color
+        return rgba(value)
+    } else if (parseFloat(value) !== NaN) {
+        return parseFloat(value)
+    } else {
+        return value
+    }
+}
 
 export const dom = {
     /**
@@ -40,7 +54,14 @@ export const dom = {
         return count
     },
     getComputedStyle: function (element) {
-        const computedStyles = window.getComputedStyle(element)
+        // too expensive
+        // const computedStyles = window.getComputedStyle(element)
+        const ownAttrs = element.getAttributeNames()
+        const computedStyles = Object.assign({}, DEFAULT_ATTRIBUTE)
+        ownAttrs.forEach(attr => {
+            computedStyles[attr] = attrValueParser(element.getAttribute(attr))
+        })
+
         let style = {}
         const BASIC_STYLES = BASIC_SVG_ELEMENTS.get(element.tagName)
         if (BASIC_STYLES) {
