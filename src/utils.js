@@ -12,13 +12,13 @@ import rgba from 'color-rgba'
 export const NUMERICAL = 'NUMERICAL'
 export const CATEGORICAL = 'CATEGORICAL'
 
-
 // parse attributes
 const attrValueParser = (value) => {
-    if (rgba(value).length == 4) {
-        // color
-        return rgba(value)
-    } else if (parseFloat(value) !== NaN) {
+    // if (rgba(value).length == 4) {
+    //     // color
+    //     return rgba(value)
+    // } else
+    if (!isNaN(parseFloat(value))) {
         return parseFloat(value)
     } else {
         return value
@@ -56,11 +56,13 @@ export const dom = {
     getComputedStyle: function (element) {
         // too expensive
         // const computedStyles = window.getComputedStyle(element)
-        const ownAttrs = element.getAttributeNames()
+        const ownAttrs = element.attributes // element.getAttributeNames()
         const computedStyles = Object.assign({}, DEFAULT_ATTRIBUTE)
-        ownAttrs.forEach(attr => {
-            computedStyles[attr] = attrValueParser(element.getAttribute(attr))
-        })
+        for (let i = 0; i < ownAttrs.length; i++) {
+            const name = ownAttrs[i].name
+            const value = ownAttrs[i].value
+            computedStyles[name] = value // attrValueParser(value)
+        }
 
         let style = {}
         const BASIC_STYLES = BASIC_SVG_ELEMENTS.get(element.tagName)

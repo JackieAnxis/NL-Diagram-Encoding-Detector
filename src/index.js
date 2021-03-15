@@ -16,6 +16,7 @@ import { BASIC_SVG_ELEMENTS } from './global'
  * @param {standard node-link data format} data
  */
 function detector(code, data) {
+    const beginTime = performance.now()
     // eslint-disable-next-line no-new-func
     const func = new Function('d3', 'data', code)
     const svg = func(d3, data)
@@ -124,6 +125,8 @@ function detector(code, data) {
     }
 
     // Step4 textualize attribute2channel
+    const endTime = performance.now()
+    console.log(endTime - beginTime)
 }
 
 export { detector }

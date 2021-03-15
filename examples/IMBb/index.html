@@ -1,0 +1,98 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Movies</title>
+    </head>
+    <body>
+        <script src="http://d3js.org/d3.v4.js" charset="utf-8"></script>
+        <script>
+            d3.json('IMDb.json', function (error, graph) {
+                if (error) throw error
+                Nodes = graph['nodes']
+                Links = graph['links']
+                console.log(Links)
+
+                width = 1000
+                height = 800
+                var svg = d3
+                    .select('body')
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+
+                color = d3.schemeCategory10
+
+                var xScale = d3.scaleLinear().domain([3, 8]).range([50, 800])
+                var yScale = d3.scaleLinear().domain([0, 150000]).range([700, 50])
+
+                //边
+                const links = svg
+                    .selectAll('link')
+                    .data(Links)
+                    .enter()
+                    .append('line')
+                    .attr('x1', function (d) {
+                        var sourceNode = Nodes.find(function (node) {
+                            return node.id == d.source
+                        })
+                        var positionX = xScale(sourceNode.avg_vote)
+                        return positionX
+                    })
+                    .attr('y1', function (d) {
+                        var sourceNode = Nodes.find(function (node) {
+                            return node.id == d.source
+                        })
+                        var positionY = yScale(sourceNode.votes)
+                        return positionY
+                    })
+                    .attr('x2', function (d) {
+                        var targetNode = Nodes.find(function (node) {
+                            return node.id == d.target
+                        })
+                        var positionX = xScale(targetNode.avg_vote)
+                        return positionX
+                    })
+                    .attr('y2', function (d) {
+                        var targetNode = Nodes.find(function (node) {
+                            return node.id == d.target
+                        })
+                        var positionY = yScale(targetNode.votes)
+                        return positionY
+                    })
+                    .attr('stroke', '#666')
+                    .attr('stroke-opacity', 1)
+                    .attr('stroke-width', function (d) {
+                        console.log(d.shared_actors)
+                        var widthScale = d3.scaleLinear().domain([9, 15]).range([0.9, 1.5])
+                        return widthScale(d.shared_actors)
+                    })
+
+                //点
+                const circles = svg
+                    .selectAll('circle')
+                    .data(Nodes)
+                    .enter()
+                    .append('circle')
+                    .attr('r', function (d) {
+                        var budget = parseInt(d.budget.substr(2))
+                        //console.log(budget);
+                        var budgetScale = d3.scaleLinear().domain([0, 200000000]).range([5, 20])
+                        return budgetScale(budget)
+                    })
+                    .attr('cx', function (d) {
+                        var x = xScale(d.avg_vote)
+                        return x
+                    })
+                    .attr('cy', function (d) {
+                        var y = yScale(d.votes)
+                        return y
+                    })
+                    .attr('fill', function (d) {
+                        var date = d.date_published
+                        var month = parseInt(date.substr(5, 2))
+                        return color[month]
+                    })
+            })
+        </script>
+    </body>
+</html>

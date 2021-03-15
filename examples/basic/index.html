@@ -6,7 +6,7 @@
     </head>
     <body></body>
     <script src="../libs/d3.v6.min.js"></script>
-    <script src="../../build/NoLin2Text.js"></script>
+    <script src="../../build/GraphDescriptor.js"></script>
     <script>
         d3.text('code.js').then(function (code) {
             d3.json('miserables.json').then(function (json) {
@@ -14,7 +14,7 @@
                 const func = new Function('d3', 'data', code)
                 const svg = func(d3, data)
                 document.body.appendChild(svg)
-                NoLin2Text.detector(code, data)
+                GraphDescriptor.detector(code, data)
             })
         })
     </script>

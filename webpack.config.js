@@ -13,8 +13,9 @@ module.exports = (env, argv) => {
         mode: 'development',
         devtool: 'inline-source-map',
         output: {
-            filename: env['mode'] === 'production' ? 'NoLin2Text.min.js' : 'NoLin2Text.js',
-            library: 'NoLin2Text',
+            filename:
+                env['mode'] === 'production' ? 'GraphDescriptor.min.js' : 'GraphDescriptor.js',
+            library: 'GraphDescriptor',
             libraryTarget: 'umd',
             path: path.resolve(__dirname, 'build')
         },

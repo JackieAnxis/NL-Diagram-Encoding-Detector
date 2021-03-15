@@ -1,5 +1,5 @@
 {
-    "name": "nolin2text",
+    "name": "graphdescriptor",
     "version": "0.0.1",
     "description": "",
     "main": "index.js",
@@ -10,14 +10,14 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/JackieAnxis/NoLin2Text.git"
+        "url": "git+https://github.com/JackieAnxis/GraphDescriptor.git"
     },
     "author": "",
     "license": "ISC",
     "bugs": {
-        "url": "https://github.com/JackieAnxis/NoLin2Text/issues"
+        "url": "https://github.com/JackieAnxis/GraphDescriptor/issues"
     },
-    "homepage": "https://github.com/JackieAnxis/NoLin2Text#readme",
+    "homepage": "https://github.com/JackieAnxis/GraphDescriptor#readme",
     "dependencies": {
         "color-rgba": "^2.2.3",
         "d-path-parser": "^1.0.0",

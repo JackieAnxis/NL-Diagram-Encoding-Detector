@@ -61,7 +61,8 @@ export class NLDComponents {
             this.osvg = svg // origin svg
 
             // compute style
-            document.body.appendChild(svg)
+            // document.body.appendChild(svg)
+
             const basicElementArray = []
             object.dfs(svg, function (element) {
                 // compute styles (include tagName), only keep basic
@@ -75,7 +76,8 @@ export class NLDComponents {
                 }
             })
             this.basicElementArray = basicElementArray
-            document.body.removeChild(svg)
+
+            // document.body.removeChild(svg)
         }
     }
 
