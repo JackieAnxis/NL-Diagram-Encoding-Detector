@@ -40,23 +40,55 @@ const node = svg
     .join('g')
     .each(function (d) {
         const g = d3.select(this)
-        const size = [10, 10]
+        const size = [20, 20]
         const percents = d.percents
-        g.selectAll('rect')
-            .data(percents)
-            .enter()
-            .append('rect')
+        const group = d.group
+        g.append('rect')
             .attr('x', -size[0] / 2)
-            .attr('y', (d, i) => {
-                return (d3.sum(percents.slice(0, i)) / 100) * size[1] - size[1] / 2
-            })
+            .attr('y', -size[1] / 2)
             .attr('width', size[0])
-            .attr('height', (d) => {
-                const height = size[1] * (d / 100)
-                return height
-            })
-            .attr('fill', (_, i) => colors[i])
+            .attr('height', size[1])
+            .attr('fill', colors[group])
             .attr('stroke-width', 1)
+        if (group % 2) {
+            g.selectAll('rect.percents')
+                .data(percents)
+                .enter()
+                .append('rect')
+                .classed('percents', true)
+                .attr('x', -size[0] / 2)
+                .attr('y', (d, i) => {
+                    return (d3.sum(percents.slice(0, i)) / 100) * size[1] - size[1] / 2
+                })
+                .attr('width', size[0])
+                .attr('height', (d) => {
+                    const height = size[1] * (d / 100)
+                    return height
+                })
+                .attr('fill', (_, i) => colors[i])
+                .attr('stroke-width', 1)
+        } else {
+            g.selectAll('ellipse.percents')
+                .data(percents)
+                .enter()
+                .append('ellipse')
+                .classed('percents', true)
+                .attr('cx', 0)
+                .attr('cy', (d, i) => {
+                    return (
+                        (d3.sum(percents.slice(0, i)) / 100) * size[1] -
+                        size[1] / 2 +
+                        (size[1] * (d / 100)) / 2
+                    )
+                })
+                .attr('rx', size[0] / 2)
+                .attr('ry', (d) => {
+                    const height = size[1] * (d / 100)
+                    return height / 2
+                })
+                .attr('fill', (_, i) => colors[i])
+                .attr('stroke-width', 1)
+        }
     })
 
 node.append('title').text((d) => d.id)

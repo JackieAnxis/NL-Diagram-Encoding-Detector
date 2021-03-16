@@ -140,7 +140,7 @@ export const object = {
             return a == b
         } else if (typeof a == 'object') {
             if (Array.isArray(a) && Array.isArray(b)) {
-                return a.length == b.length && a.every((_, i) => a[i] == b[i])
+                return a.length == b.length && a.every((_, i) => this.isEqual(a[i], b[i]))
             } else if (!Array.isArray(a) && !Array.isArray(b)) {
                 // Create arrays of property names
                 const aProps = Object.getOwnPropertyNames(a)
@@ -157,7 +157,7 @@ export const object = {
 
                     // If values of same property are not equal,
                     // objects are not equivalent
-                    if (a[propName] !== b[propName]) {
+                    if (!this.isEqual(a[propName], b[propName])) {
                         return false
                     }
                 }
