@@ -65,7 +65,7 @@ export const dom = {
         }
 
         let style = {}
-        const BASIC_STYLES = BASIC_SVG_ELEMENTS.get(element.tagName)
+        let BASIC_STYLES = BASIC_SVG_ELEMENTS.get(element.tagName)
         if (BASIC_STYLES) {
             // step1: for positions
             if (element.tagName == 'circle' || element.tagName == 'ellipse') {
@@ -136,7 +136,7 @@ export const object = {
             return false
         }
 
-        if (typeof a == 'string' || typeof a == 'number') {
+        if (typeof a == 'string' || typeof a == 'number' || typeof a == 'undefined') {
             return a == b
         } else if (typeof a == 'object') {
             if (Array.isArray(a) && Array.isArray(b)) {
@@ -272,4 +272,65 @@ export const NoLinDiagram = {
             }
         }
     }
+}
+
+/**
+ * returns a NLized string, e.g., ['a', 'b'] => 'a and b', ['a', 'b', 'c'] => 'a, b, and c'
+ * @param {String[]} array
+ * @param {String} connector
+ */
+export function textualizeStringArray(array, connector = 'and') {
+    let str = ''
+    if (array.length == 1) {
+        return array[0]
+    }
+    if (array.length == 2) {
+        return array.join(` ${connector} `)
+    }
+    array.forEach((item, i) => {
+        str += item
+        if (i < array.length - 1) {
+            if (i == array.length - 2) {
+                str += `, ${connector} `
+            } else {
+                str += ', '
+            }
+        }
+    })
+    return str
+}
+
+export function number2ordinal(number) {
+    var special = [
+        'zeroth',
+        'first',
+        'second',
+        'third',
+        'fourth',
+        'fifth',
+        'sixth',
+        'seventh',
+        'eighth',
+        'ninth',
+        'tenth',
+        'eleventh',
+        'twelfth',
+        'thirteenth',
+        'fourteenth',
+        'fifteenth',
+        'sixteenth',
+        'seventeenth',
+        'eighteenth',
+        'nineteenth'
+    ]
+    var deca = ['twent', 'thirt', 'fort', 'fift', 'sixt', 'sevent', 'eight', 'ninet']
+
+    function stringifyNumber(n) {
+        if (n < 20) return special[n]
+        if (n % 10 === 0) return deca[Math.floor(n / 10) - 2] + 'ieth'
+        return deca[Math.floor(n / 10) - 2] + 'y-' + special[n % 10]
+    }
+
+    // TEST LOOP SHOWING RESULTS
+    return stringifyNumber(number)
 }

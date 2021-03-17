@@ -11,6 +11,16 @@ const COMMON_STYLE_CHANNELS = new Set([
     'transform' // great, numerical
 ])
 
+const COMMON_POSITION_CHANNELS = new Map([
+    ['circle', new Set(['cx', 'cy'])], // great, numerical
+    ['ellipse', new Set(['cx', 'cy'])], // great, numerical
+    ['line', new Set(['x1', 'x2', 'y1', 'y2'])], // great, numerical
+    ['polygon', new Set(['points'])], // great, numerical array
+    ['polyline', new Set(['points'])], // great, numerical array
+    ['rect', new Set(['x', 'y'])], // great, rx/ry: mayby, all numerical
+    ['path', new Set([])] // great, categorical + numerical
+])
+
 const DEFAULT_ATTRIBUTE = {
     fill: [255, 255, 255, 1],
     'fill-opacity': 1,
@@ -37,4 +47,14 @@ BASIC_SVG_ELEMENTS.forEach((attributes, name) => {
 })
 
 const CONNECTOR_CHAR = '→'
-export { BASIC_SVG_ELEMENTS, COMMON_STYLE_CHANNELS, DEFAULT_ATTRIBUTE, CONNECTOR_CHAR }
+
+const SHARED_CHANNELS = new Set(['rx', 'ry', 'cx', 'cy', 'points'])
+
+export {
+    BASIC_SVG_ELEMENTS,
+    COMMON_STYLE_CHANNELS,
+    DEFAULT_ATTRIBUTE,
+    CONNECTOR_CHAR,
+    COMMON_POSITION_CHANNELS,
+    SHARED_CHANNELS
+}
